@@ -1,0 +1,401 @@
+Okay, let's look at these errors. The user mentioned that Microsoft Visual Studio shows several errors but the code still compiles and runs. The errors are about incomplete types and pointers to incomplete types. Let me go through each error to understand what's wrong.
+
+First, the error E0852: "expression must be a pointer to a complete object type". This usually happens when the compiler doesn't have the full definition of a class that's being used. In C++, if you have a class that's only forward-declared (like class Entity;), you can't create objects of that type or dereference pointers to it until the full definition is provided.
+
+Looking at the code, there's a forward declaration for class Entity, but in some parts of the code, especially in the Entity class's methods, there are references to other classes like Laser, Missle, etc. For example, the Entity class has a member Laser* last_bullet;. If Laser is only forward-declared, the compiler doesn't know its size or members, leading to incomplete type errors when trying to use it.
+
+Similarly, the error E0070: "incomplete type is not allowed" suggests that the code is using a type that hasn't been fully defined. This can happen when a header is missing or when there's a circular dependency between classes.
+
+In the provided code, several classes (Entity, Laser, Missle, etc.) are forward-declared at the top, but their full definitions come later. However, when the Entity class is defined, it includes pointers to Laser and Missle objects. The compiler needs to know the complete definitions of these classes when they are used in member variables or function parameters.
+
+The solution here is to ensure that all classes are properly defined before they are used. If Entity uses Laser and Missle, then Laser and Missle should be fully defined before the Entity class. Alternatively, if there's a circular dependency (e.g., Entity references Laser, which references Entity), forward declarations can be used, but member functions that require the full definition should be implemented after the dependent classes are defined.
+
+Another possible issue is the use of vectors of these classes. For example, std::vector<Entity> EntityArr; requires the full definition of Entity because the vector needs to know the size of Entity to manage memory. If Entity is only forward-declared, this line will cause an error. However, in the provided code, the vector is declared after the full definition of Entity, so that might not be the case here. Wait, looking back, the forward declarations are at the top, but the actual vector declarations are after the class definitions, so that part should be okay.
+
+Wait, the problem might be in the inclusion of standard library headers. The errors mention lines in vector and xmemory, which are part of the STL. This suggests that when the STL code is being instantiated (like when creating a vector of Entity), the Entity class is not fully defined at that point. But in the code, the vectors are declared after the Entity class is defined. Hmm.
+
+Wait, looking at the code structure: The forward declarations are at the top, then the class Entity is defined. The vectors like std::vector<Entity> EntityArr; are declared after the class definition. So that should be okay. Unless there's a scenario where a member function of Entity (which is defined inline) uses another class that's not yet defined.
+
+For example, in Entity's AI() function, there's code that accesses enemy->pos[0], which is a member of Entity. Since enemy is a pointer to Entity, and the full definition of Entity is available by the time the member functions are defined, this should be okay.
+
+Wait, but maybe the problem is in the STL's implementation when using certain templates. For example, if a method in Entity returns a vector<Entity>, but Entity isn't fully defined. But in this code, that's not the case.
+
+Alternatively, the errors might be caused by the use of incomplete types in the STL containers. For example, if you have a vector of a class that's only forward-declared, that's allowed as long as you don't perform operations that require the type to be complete (like resizing the vector). But in the code, the vectors are declared after the class definitions, so this shouldn't be the issue.
+
+Another angle: The errors are pointing to lines in the standard library headers. This suggests that the compiler is trying to instantiate a template (like std::vector) with an incomplete type. For example, if somewhere in the code, a vector is declared with a forward-declared class before the class is fully defined.
+
+Looking at the code, the user has forward-declared classes like Entity, Laser, Missle, etc. Then, later in the code, these classes are fully defined. However, the member functions of Entity (like AI()) might be using pointers to Laser or Missle, which are only forward-declared. When the compiler processes these member functions, if Laser or Missle are not fully defined, it would cause errors.
+
+Wait, in the code, the Laser class is defined after the Entity class. So in Entity's member functions, when they refer to Laser* last_bullet;, the Laser class hasn't been fully defined yet. That's a problem because the compiler needs to know the size and layout of Laser when it's used in Entity's methods. But since it's just a pointer, a forward declaration should suffice. However, if in the implementation of Entity's methods (like the destructor), there's code that accesses members of Laser, that would require the full definition.
+
+Looking at the Entity destructor:
+
+~Entity()
+
+{
+
+// std::cout << "Entity Deleted ID:" << to_string(uniqueID) << std::endl;
+
+//delete ammo_Target;
+
+//delete enemy;
+
+////delete last_bullet_sender;
+
+//delete &flag_nodes;
+
+//delete &flag_nodes_vel;
+
+}
+
+This is commented out, so maybe not the issue. But if there are other places where members of Laser or Missle are accessed in Entity's methods, that would require their full definitions.
+
+Another possibility is that in the code, there are functions that take parameters of these classes by value, which requires the complete type. But in the given code, most uses are pointers, which should be okay with forward declarations.
+
+Wait, looking at the function declarations:
+
+void SpawnLaser(float posx, float posy, float vel, float ang, float dam, float team, Entity* sender, std::vector <float> size = { 2, 1 });
+
+Here, the sender is an Entity*, which is forward-declared. That's okay.
+
+But in the implementation of SpawnLaser, which is probably after the Entity class is defined, but Laser is defined after Entity. So when the Laser class is being defined, and it has a member Entity* sender, which is okay because Entity is fully defined by then.
+
+Hmm. The order of class definitions might be the key here. Let me check the order in the code:
+
+The code starts with forward declarations of several classes (Entity, Laser, Missle, etc.), then defines the Entity class. After Entity, the Laser class is defined, then Missle, etc.
+
+But in the Entity class definition, there's a member variable Laser* last_bullet;. At that point, Laser has only been forward-declared. So when the compiler processes the Entity class, it doesn't know the full definition of Laser. However, using a pointer to a forward-declared class is allowed in C++. So this should be okay as long as the code doesn't dereference the pointer or access members of Laser in the Entity class's inline methods.
+
+But in the Entity class's methods (like AI()), if there's code that does something like last_bullet->some_member, that would require the full definition of Laser. If the Laser class is defined after Entity, then in the Entity method definitions (which are inline in the class declaration), the compiler hasn't seen the full Laser definition yet, leading to errors.
+
+Ah, this is the issue. For example, in Entity's AI() function, which is defined inline within the Entity class definition, there's code that accesses last_bullet's members. Since Laser hasn't been fully defined yet, the compiler doesn't know the members of Laser, causing errors.
+
+The solution is to move the definitions of the member functions that use Laser or Missle pointers to after those classes have been fully defined. However, in the given code, the member functions are defined inline within the Entity class, which is before Laser and Missle are defined. Thus, when the compiler compiles the Entity class's inline methods, it doesn't have the full definitions of Laser or Missle, leading to incomplete type errors.
+
+To fix this, the member functions that use Laser or Missle should be declared inside the Entity class but defined outside, after the Laser and Missle classes have been fully defined.
+
+For example, instead of:
+
+class Entity {
+
+public:
+
+// ...
+
+void AI() {
+
+// code that uses Laser*
+
+}
+
+};
+
+We should have:
+
+class Entity {
+
+public:
+
+// ...
+
+void AI();
+
+};
+
+// Later, after Laser is defined
+
+void Entity::AI() {
+
+// code that uses Laser*
+
+}
+
+But in the provided code, all the member functions (like AI(), move(), etc.) are defined inline within the Entity class. This means that when the compiler processes these functions, Laser and Missle are only forward-declared, leading to incomplete type errors when their members are accessed.
+
+Therefore, the errors are caused by the inline member functions of Entity accessing members of Laser or Missle, which are not yet fully defined. The solution is to move the definitions of these member functions after the Laser and Missle classes have been fully defined.
+
+In the given code, after the Entity class is defined, the Laser and Missle classes are defined. So, the Entity member functions that use Laser or Missle should be moved after their respective class definitions.
+
+However, since the code defines all member functions inline within the Entity class, this approach would require significant restructuring. Alternatively, the Laser and Missle classes can be defined before the Entity class, but that might not be possible if they have dependencies on Entity as well (circular dependencies).
+
+Another approach is to forward-declare the Laser and Missle classes and ensure that the Entity member functions that use them are not defined inline. Instead, their declarations are in the class, and their definitions are placed after the Laser and Missle classes are fully defined.
+
+So, the steps to fix the errors would be:
+
+1. Forward-declare the necessary classes (Entity, Laser, Missle, etc.).
+
+2. Define the Entity class with member function declarations but not inline definitions.
+
+3. Define the Laser and Missle classes.
+
+4. Define the Entity member functions after Laser and Missle are fully defined, so that their members can be accessed.
+
+This way, when the compiler processes the Entity member functions, it knows the full definitions of Laser and Missle.
+
+But in the current code, this isn't the case. The Entity class is defined first with inline member functions that use Laser and Missle pointers. Since Laser and Missle are defined after Entity, their full definitions aren't available when the Entity member functions are compiled, leading to the errors.
+
+To resolve this, the order of class definitions should be adjusted. Laser and Missle should be defined before Entity. However, if Laser or Missle have members that are pointers to Entity, that's okay because Entity is forward-declared.
+
+Alternatively, if Laser and Missle depend on Entity, their definitions can come after Entity, but the Entity member functions that use them must be defined after Laser and Missle are defined.
+
+Given the complexity of the code, the most feasible fix is to move the definitions of the Entity member functions (like AI(), draw(), etc.) outside of the class declaration and place them after the definitions of Laser and Missle. This way, when the member functions are defined, the compiler has the full definitions of all dependent classes.
+
+But this requires modifying the code structure, which might be extensive. Let's see how the code is structured:
+
+The code has the Entity class defined first, with all member functions implemented inline. Then Laser, Missle, etc., are defined afterward.
+
+Therefore, any member function of Entity that uses Laser or Missle will have their code compiled before Laser/Missle are defined, leading to incomplete type errors.
+
+For example, in Entity's AI() function:
+
+void AI()
+
+{
+
+if (ID == "tank") {
+
+// ...
+
+if (last_bullet_sender != nullptr) {
+
+last_bullet_sender->kill_count += 1; // Accessing kill_count, which is a member of Entity
+
+last_bullet_ID = last_bullet_sender->ID; // Accessing ID, which is a member of Entity
+
+}
+
+// ...
+
+}
+
+}
+
+Wait, here last_bullet_sender is an Entity*, so accessing its members (kill_count, ID) requires the full definition of Entity, which is available because Entity is being defined. But when last_bullet is a Laser*, and in the code there's last_bullet->something, then Laser must be fully defined.
+
+Looking at the code, in Entity's AI() function:
+
+// Reward Killer
+
+if (last_bullet_sender != nullptr)
+
+{
+
+last_bullet_sender->kill_count += 1;	// Increate killer killcount
+
+last_bullet_ID = last_bullet_sender->ID;	// Check if bullet came from Tank or Fort
+
+last_bullet_team = last_bullet_sender->team; // Check team of killer
+
+}
+
+Here, last_bullet_sender is an Entity*, which is fine because Entity is fully defined. But other parts may use Laser or Missle.
+
+Wait, maybe the errors are not directly in the user's code but in the standard library when it's trying to handle certain operations. For example, if a vector<Entity> is being manipulated and Entity is incomplete, but in the code, the vectors are declared after Entity is defined.
+
+Hmm, this is tricky. Another possibility is that the code uses a variant or other template that requires the complete type. But I don't see that in the provided code.
+
+Alternatively, the error might be due to the use of nlohmann::json and the way it's parsed, but that's less likely.
+
+Another angle: The error messages point to lines in the STL headers. For example:
+
+Error (active) E0852 expression must be a pointer to a complete object type Tank Attack - SFML C:\Program Files\...\vector 2055
+
+Looking at line 2055 of the vector header (which is implementation-dependent), but generally, this could happen when trying to instantiate a vector with an incomplete type.
+
+In the code, there's a vector<Entity> EntityArr;. If Entity is incomplete when this vector is declared, that's a problem. But in the code, EntityArr is declared after the full definition of Entity, so that shouldn't be the case.
+
+Wait, no. The code structure is:
+
+// Forward declarations
+
+class Entity;
+
+// ... other forward declarations
+
+// Then, various function declarations
+
+// Global variables, including vectors like std::vector<Entity> EntityArr;
+
+But wait, in the code provided, the global variables (including the vectors) are declared after the class definitions. Let me check:
+
+Looking at the code:
+
+After the class definitions (Entity, Laser, Missle, etc.), the global variables are declared, including:
+
+std::vector <Entity> EntityArr;
+
+std::vector <Laser> LaserArr;
+
+std::vector <Missle> MissleArr;
+
+// etc.
+
+So these vectors are declared after their respective classes are defined, which should be okay. However, if somewhere else in the code (e.g., in a header or another part of the code) these vectors are declared before the class definitions, that would cause an error.
+
+In the provided code, the order seems correct: classes are defined first, then the vectors. So why the error?
+
+Wait, maybe in the code, there's a member function in one of the classes that returns or uses a vector of an incomplete type. For example, if Entity has a member variable that's a vector<Laser>, and Laser hasn't been fully defined yet.
+
+Looking at the Entity class:
+
+class Entity {
+
+public:
+
+// ...
+
+Laser* last_bullet;
+
+// ...
+
+};
+
+This is a pointer, which is okay with forward declaration. But if it were a vector<Laser>, that would require the full definition. But it's a pointer, so no.
+
+Another possibility: the code uses templates that require complete types. For example, if you have a std::unique_ptr<Laser> and the destructor is implicitly generated, which requires the complete type. But in the code, the destructor of Entity is defined (even if commented out), and it doesn't delete any Laser pointers, so that shouldn't be an issue.
+
+Alternatively, the problem is in the Missle class's explode() function, which calls SpawnLaser. The SpawnLaser function takes an Entity* sender. If that's processed before Entity is fully defined, but since the Missle class is defined after Entity, that should be okay.
+
+This is quite perplexing. Let me try to see the actual code lines causing the error. The user provided the code, and the errors are in the STL headers. This suggests that somewhere in the code, a template instantiation is happening with an incomplete type.
+
+For example, if the code has a function that returns a vector<Entity> and that function is declared before Entity is fully defined, but the definition is after. But in the code, the vectors are declared after the class definitions.
+
+Wait, perhaps the problem is with the Entity's member functions that take or return these types. For instance, if a member function of Entity returns a vector<Laser>, but Laser isn't fully defined yet.
+
+Looking through the code, the Entity class has members like std::vector <std::array <float, 2>> trail_positions;, which are okay. The problematic lines would be where a member function's implementation (even if inline) refers to an incomplete type.
+
+Ah, in the Entity's AI() function, there's code that accesses enemy, which is an Entity*. That should be okay. But when compiling the inline functions, the compiler needs to have the full definition of any types used in the function bodies.
+
+Wait, the Laser class has a member Entity* sender;. When the Laser class is defined, Entity has already been fully defined (since Laser is defined after Entity), so that's okay.
+
+Similarly, Missle has Entity* sender and Entity* target, which are okay.
+
+Another angle: The use of forward declarations in the global scope. The code starts with forward declarations of all necessary classes, which should allow pointers and references to them. But when the compiler processes the member functions of Entity that use these pointers, it needs to have the full definitions only if the functions are doing more than just storing the pointer.
+
+In this case, the errors are about incomplete types when the STL is trying to manage memory, which could happen if, for example, a vector is resized, which requires knowing the size of the elements. But in the code, the vectors are of Entity, Laser, etc., which are fully defined when the vectors are declared.
+
+This is getting quite complicated. To sum up, the errors are likely due to the inline member functions of the Entity class accessing members of Laser or Missle, which haven't been fully defined yet. The solution is to move the definitions of these member functions after the Laser and Missle classes are defined.
+
+Given that the code is extensive, restructuring it would involve:
+
+1. Forward-declaring all necessary classes.
+
+2. Defining the Entity class with member function declarations (not inline definitions).
+
+3. Defining the Laser, Missle, etc., classes.
+
+4. Defining the Entity member functions after Laser and Missle are defined.
+
+However, in the current code, all member functions are defined inline within the Entity class. Therefore, moving their definitions after the other classes would require changing the code structure.
+
+For example, change:
+
+class Entity {
+
+public:
+
+void AI() {
+
+// ... code using Laser*
+
+}
+
+};
+
+to:
+
+class Entity {
+
+public:
+
+void AI();
+
+};
+
+// After Laser and Missle are defined
+
+void Entity::AI() {
+
+// ... code using Laser*
+
+}
+
+This way, when the compiler processes the AI() function's definition, it has already seen the full definitions of Laser and Missle.
+
+In the provided code, this would require separating the Entity class's method definitions from their declarations. Since the code is quite lengthy, this would be a significant change, but it's necessary to resolve the incomplete type errors.
+
+Another possible spot is the use of checkEntity function, which returns an Entity*. But if that's declared before Entity is defined, but the definition is after, that's okay.
+
+In conclusion, the root cause is that the inline member functions of Entity are using pointers to Laser and Missle, which are only forward-declared at that point. To fix this, the member function definitions that use these pointers must be moved after the full definitions of Laser and Missle.
+
+To resolve the incomplete type errors in the provided code, you need to ensure that all classes are fully defined before their usage in member functions. The main issue arises because the Entity class's inline member functions (e.g., AI(), draw()) reference pointers to Laser and Missle, which are defined later. Here's how to fix it:
+Steps to Fix the Errors:
+
+    Forward Declare Necessary Classes:
+    Keep the forward declarations at the top so that classes can reference each other.
+
+    Define Entity Class with Member Declarations:
+    Declare member functions inside the Entity class but define them after Laser and Missle are fully defined.
+
+    Move Member Function Definitions:
+    Implement Entity's member functions after Laser and Missle classes are defined to ensure complete types.
+
+Modified Code Structure:
+cpp
+Copy
+
+// Forward declarations
+class Entity;
+class Laser;
+class Missle;
+// ... other forward declarations
+
+// Entity class declaration (without inline member definitions)
+class Entity {
+public:
+    // ... member variables and declarations
+    void AI();
+    void move();
+    void draw();
+    // ... other member functions
+};
+
+// Define Laser and Missle classes after Entity declaration but before Entity's member definitions
+class Laser {
+    // ... definition
+};
+
+class Missle {
+    // ... definition
+};
+
+// Now define Entity's member functions
+void Entity::AI() {
+    // Implementation that uses Laser* and Missle*
+}
+
+void Entity::move() {
+    // Implementation
+}
+
+void Entity::draw() {
+    // Implementation
+}
+
+// ... other member function definitions
+
+Explanation:
+
+    Incomplete Type Errors: Occur because the compiler encounters references to Laser or Missle in Entity's member functions before these classes are fully defined.
+
+    Solution: By separating the declaration and definition of Entity's member functions, you allow the compiler to process Laser and Missle classes first, making their complete types available when the member functions are defined.
+
+Key Changes to Apply:
+
+    Convert Inline Functions to Out-of-Line:
+    Remove the inline definitions from the Entity class and place them after Laser and Missle are defined.
+
+    Adjust Code Order:
+    Ensure that Laser and Missle classes are fully defined before the Entity member functions that use them.
+
+By restructuring the code this way, you resolve the incomplete type issues, allowing the compiler to correctly handle the dependencies between classes.

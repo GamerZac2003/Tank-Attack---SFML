@@ -1,0 +1,13 @@
+- Limited Tank Healing
+	- Forts can only heal X amount of Tanks
+
+
+- Resource Update
+	- Introduce Resources
+	- Mining Vehicles
+	- Resource Mechanics
+
+- Pathfinding Update
+	- Introduce Terrain, Unpassable Tiles and Pathfinding Tanks
+
+
