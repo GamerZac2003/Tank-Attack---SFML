@@ -274,17 +274,18 @@ int game_ticks = 0;
 std::ifstream GameRuleFile("GameRules.json");
 json _jData_GameRules = json::parse(GameRuleFile);
 
-bool NEED_SUPPLIES =		_jData_GameRules["NEED_SUPPLIES"];
-bool CONVERT_FORTS =		_jData_GameRules["CONVERT_FORTS"];
-bool CONVERT_TANKS =		_jData_GameRules["CONVERT_TANKS"];
-bool GIFT_TANKS =			_jData_GameRules["GIFT_TANKS"];
-bool FORTS_SPAWN_TANKS =	_jData_GameRules["FORTS_SPAWN_TANKS"];
-bool FORTS_ATTACK_FORTS =	_jData_GameRules["FORTS_ATTACK_FORTS"];
-bool FORTS_NEUTERED =		_jData_GameRules["FORTS_NEUTERED"];
-bool FORT_MISSLES =			_jData_GameRules["FORT_MISSLES"];
-bool FORT_HEALING =			_jData_GameRules["FORT_HEALING"];
-bool SPECIAL_TANKS =		_jData_GameRules["SPECIAL_TANKS"];
-bool SPECIAL_FORTS =		_jData_GameRules["SPECIAL_FORTS"];
+bool NEED_SUPPLIES =				_jData_GameRules["NEED_SUPPLIES"];
+bool CONVERT_FORTS =				_jData_GameRules["CONVERT_FORTS"];
+bool CONVERT_TANKS =				_jData_GameRules["CONVERT_TANKS"];
+bool GIFT_TANKS =					_jData_GameRules["GIFT_TANKS"];
+bool FORTS_SPAWN_TANKS =			_jData_GameRules["FORTS_SPAWN_TANKS"];
+bool FORTS_ATTACK_FORTS =			_jData_GameRules["FORTS_ATTACK_FORTS"];
+bool FORTS_NEUTERED =				_jData_GameRules["FORTS_NEUTERED"];
+bool FORT_MISSLES =					_jData_GameRules["FORT_MISSLES"];
+bool FORT_HEALING =					_jData_GameRules["FORT_HEALING"];
+bool SPECIAL_TANKS =				_jData_GameRules["SPECIAL_TANKS"];
+bool SPECIAL_FORTS =				_jData_GameRules["SPECIAL_FORTS"];
+
 
 
 
@@ -343,6 +344,9 @@ float special_fort_tankspawn_factor =		_jsonData01["special_fort_tankspawn_facto
 float special_fort_misslecooldown_factor =	_jsonData01["special_fort_misslecooldown_factor"];
 float special_fort_damage_factor =			_jsonData01["special_fort_damage_factor"];
 float special_fort_range_factor =			_jsonData01["special_fort_range_factor"];
+float special_fort_territory_power =		_jsonData01["special_fort_territory_power"];
+
+float assimilating_fort_territory_power =	_jsonData01["assimilating_fort_territory_power"];
 
 // Entity Constant Values
 
@@ -550,24 +554,18 @@ public:
 
 	bool special;
 
-	//const int fg = 100;
-	std::vector <std::array <float, 2>> trail_positions;
-	std::vector <std::array <float, 2>> old_trail_positions;
-
-	std::vector <sf::Vector2f> flag_nodes;
-	std::vector <sf::Vector2f> flag_nodes_vel;
 
 	// Arc angles
 	float tank_health_arc_angle, fort_health_arc_angle, fort_assimilation_arc_angle;
 
 
 
-	Entity(std::string stringID) :
+	Entity(const std::string stringID) :
 		ammo_Target(nullptr),
 		enemy(nullptr),
 		last_bullet(nullptr),
 		last_bullet_sender(nullptr),
-		ID(""),
+		ID(stringID),
 		pos{ 0,0 }, vel{ 0,0 }, acc{ 0,0 },
 		rect{},
 		ang(0),
@@ -605,10 +603,8 @@ public:
 		level(0), fort_level(0), fort_tanks_healed(0), fort_tanks_spawned(0),
 		fort_tanks_spawned_threshold(0), fort_tanks_healed_threshold(0),
 		HealTankArray{}, special(false),
-		trail_positions(), old_trail_positions(),
 		tank_health_arc_angle(0), fort_health_arc_angle(0), fort_assimilation_arc_angle(0)
 	{
-		ID = stringID;
 		
 		if (ID == "tank") {
 			if (eventLogging) {
@@ -687,14 +683,6 @@ public:
 			pos[0] = spawn_pos.x;
 			pos[1] = spawn_pos.y;
 
-			for (int i = 0; i < tankTrailLength; i++) {
-				trail_positions.push_back({ 0,0 });
-				old_trail_positions.push_back({ 0,0 });
-				for (int j = 0; j < 2; j++) {
-					trail_positions[i][j] = pos[j];
-					old_trail_positions[i][j] = pos[j];
-				}
-			}
 
 			
 			
@@ -751,11 +739,6 @@ public:
 			entitySprite.setTexture(FortTextArr[team]);
 
 
-			for (int i = 0; i < fortFlagNodeNumber; i++) { // Initialize Flag coords
-				flag_nodes.push_back({ pos[0] + (fortFlagNodeLength * 1.0f * i ), pos[1] });
-				flag_nodes_vel.push_back({ 0,0 });
-				flag_nodes[i] += {(float)((rand() % 10) - 5), float((rand() % 10) - 5)};
-			}
 		}
 
 	}
@@ -954,17 +937,29 @@ public:
 
 	}
 
-	
-
-	~Entity()
-	{
-		// std::cout << "Entity Deleted ID:" << to_string(uniqueID) << std::endl;
-		//delete ammo_Target;
-		//delete enemy;
-		////delete last_bullet_sender;
-		//delete &flag_nodes;
-		//delete &flag_nodes_vel;
+	float getTerritoryPower() {
+		if (ID == "fort") {
+			if (eventLogging) { std::cout << "Fort.getTerritoryPower()" << std::endl; }
+			if (Tank_spawn_timer < 0) { return assimilating_fort_territory_power; }
+			if (special) {
+				return special_fort_territory_power;
+			}
+			else {
+				return 1.0f;
+			}
+		}
 	}
+	bool isAssimilating() {
+		if (ID == "fort") {
+			if (eventLogging) { std::cout << "Fort.isAssimilating()" << std::endl; }
+			if (Tank_spawn_timer < 0) { return true; }
+			else { return false; }
+		}
+		return false;
+	}
+
+	
+	
 };
 
 
@@ -2465,18 +2460,7 @@ void Entity::move()
 		a_ang = 0;
 
 		//last_pos += pos;
-		for (int i = 0; i < tankTrailLength; i++) {
-			for (int j = 0; j < 2; j++) {
-				old_trail_positions[i][j] = trail_positions[i][j];
-				if (i == 0) {
-					trail_positions[i][j] = pos[j];
-				}
-				else {
-					trail_positions[i][j] = old_trail_positions[i - 1][j];
-				}
-			}
 
-		}
 		// Add GameFPSRatio
 		for (int i = 0; i < 2; i++) {
 			vel[i] += acc[i] * GameFPSRatio;
@@ -2719,17 +2703,6 @@ void Entity::draw()
 			drawFilledRect(window, tmp_rect, col);
 		}
 
-		// Draw Flag
-		for (int i = 1; i < fortFlagNodeNumber; i++) {
-			sf::Vector2f pos1 = flag_nodes[i - 1];
-			sf::Vector2f pos2 = flag_nodes[i];
-			pos1 = { pos1.x - Camera_Pos[0], pos1.y - Camera_Pos[1] };
-			pos2 = { pos2.x - Camera_Pos[0], pos2.y - Camera_Pos[1] };
-			opp_col.a = 30;
-			drawThickLine(window, pos1, pos2, 15, opp_col);
-
-
-		}
 
 
 		if (DEBUG_FEATURES) {
@@ -2896,30 +2869,26 @@ public:
 		float dx, dy, dis, smallest_dis;
 		bool found = false;
 		smallest_dis = Fort_RANGE * 2;
-		float ranged_dis = 0.0;
-		float smallest_ranged_dis = 10000;
 		sf::Color last_col;
 		last_col = col;
 		
 
+		// Looking for closest fort
 		for (Entity &entity : EntityArr) {
 			if (entity.ID == "fort") {
 				dx = pos.x - entity.pos[0];
 				dy = pos.y - entity.pos[1];
 
 				dis = std::sqrt(dx * dx + dy * dy);
-				ranged_dis = dis / entity.range;
-				if (ranged_dis < smallest_ranged_dis && dis < entity.range * 2) {
-					smallest_ranged_dis = ranged_dis;
-					smallest_dis = dis;
+				
+				if (dis / entity.getTerritoryPower() < smallest_dis && dis / entity.getTerritoryPower() < entity.range * 2) {
+					smallest_dis = dis / entity.getTerritoryPower();
 					fort = &entity;
 					FortID = entity.uniqueID;
 					found = true;
 				}
 			}
 		}
-
-		
 		if (found) {
 			team = fort->team;
 			col = colorArr[team];
