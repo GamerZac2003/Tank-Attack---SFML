@@ -40,7 +40,7 @@
 	"special_fort_misslecooldown_factor": 2,
 	"special_fort_damage_factor": 1.5,
 	"special_fort_range_factor": 1,
-	"special_fort_territory_power": 1.33,
+	"special_fort_territory_power": 1.5,
   "assimilating_fort_territory_power": 0.67,
 
 
