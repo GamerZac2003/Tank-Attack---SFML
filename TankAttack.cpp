@@ -5340,119 +5340,119 @@ void saveJSONData()
 	std::string fileName;
 	std::ofstream outputFile;
 
+	// Ensure the "Game Data" directory exists
+	const std::string folderName = "Game Data";
+	if (!Folder_Exists(folderName)) {
+		_mkdir(folderName.c_str());
+	}
+
+	// Helper lambda to prepend folder path
+	auto makePath = [&](const std::string& name) {
+		return folderName + "/" + name;
+	};
+
 	// Tank Population Array
 	jsonArray = json(TankPopArr);
-	fileName = "TankPop.json";
+	fileName = makePath("TankPop.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Fort Population Array
 	jsonArray = json(FortPopArr);
-	fileName = "FortPop.json";
+	fileName = makePath("FortPop.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Captured Fort Population Array
 	jsonArray = json(CapturedFortPopArr);
-	fileName = "CapturedFortPop.json";
+	fileName = makePath("CapturedFortPop.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Captured Fort Ratio Array
 	jsonArray = json(CapturedFortRatioArr);
-	fileName = "CapturedFortRatio.json";
+	fileName = makePath("CapturedFortRatio.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Special Tank Population Array
 	jsonArray = json(SpecialTankPopArr);
-	fileName = "SpecialTankPop.json";
+	fileName = makePath("SpecialTankPop.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Special Tank Ratio Array
 	jsonArray = json(SpecialTankRatioArr);
-	fileName = "SpecialTankRatio.json";
+	fileName = makePath("SpecialTankRatio.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Special Fort Pop Arr
 	jsonArray = json(SpecialFortPopArr);
-	fileName = "SpecialFortPop.json";
+	fileName = makePath("SpecialFortPop.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Special Fort Ratio Arr
 	jsonArray = json(SpecialFortRatioArr);
-	fileName = "SpecialFortRatio.json";
+	fileName = makePath("SpecialFortRatio.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Tanks Killed Array
 	jsonArray = json(TanksKilledArr);
-	fileName = "TanksKilled.json";
+	fileName = makePath("TanksKilled.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Tanks Lost Array
 	jsonArray = json(TanksLostArr);
-	fileName = "TanksLost.json";
+	fileName = makePath("TanksLost.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
-
 
 	// Average Tank Age Array
 	jsonArray = json(AverageTankAgeArr);
-	fileName = "AverageTankAge.json";
+	fileName = makePath("AverageTankAge.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
 		outputFile.close();
 	}
 
-
 	// Team Territory Array
 	jsonArray = json(TeamTerritoryArr);
-	fileName = "Territory.json";
+	fileName = makePath("Territory.json");
 	outputFile.open(fileName);
 	if (outputFile.is_open()) {
 		outputFile << jsonArray.dump(4);
