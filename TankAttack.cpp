@@ -2845,12 +2845,14 @@ public:
 
 	int tank_deaths;
 
+	bool fort_is_assimilating;
+
 
 	Tile(sf::Vector2f sp_pos, int gx, int gy) :
 		col({ 0, 0, 0, 0 }), flash_state(false), flash_timer(0), max_flash_time(60),
 		flash_vel(1), flash_intensity(255), FortID(-1), pos(sp_pos), team(-1),
 		fort(nullptr), radius(0), grid_x(gx), grid_y(gy), border_tile(false), neighbors{},
-		flicker_timer(0), flicker_timer_vel(1), tank_deaths(0)
+		flicker_timer(0), flicker_timer_vel(1), tank_deaths(0), fort_is_assimilating(false)
 	{
 		
 		flicker_timer = (float)((rand() % 99 )+ 1) ;
@@ -2893,6 +2895,7 @@ public:
 			team = fort->team;
 			col = colorArr[team];
 			col.a = 64;
+			fort_is_assimilating = (fort->Tank_spawn_timer < 0);
 			if (smallest_dis > fort->range) {
 				col.a = 16;
 			}
@@ -2935,6 +2938,7 @@ public:
 
 		circle.setPosition({ gx, gy });
 		circle.setOutlineColor(col);
+		if (fort_is_assimilating) { circle.setOutlineColor({ col.r,col.g,col.b,(sf::Uint8)(col.a * 0.5) }); }
 		circle.setFillColor({ 0,0,0,0 });
 
 		flicker_timer += flicker_timer_vel * 2.5 * GameFPSRatio;
@@ -2945,6 +2949,9 @@ public:
 		if (flicker_timer > 100) { flicker_timer = 100; }
 		float temp = col.a;
 		col.a = (col.a / 6) * flicker_timer / 100;
+		if (fort_is_assimilating) {
+			col.a = col.a / 2;
+		}
 		circle.setFillColor(col);
 		col.a = temp;
 
