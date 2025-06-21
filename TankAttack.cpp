@@ -2826,7 +2826,7 @@ class Tile
 public:
 	sf::Vector2f pos;
 	int grid_x, grid_y;
-	sf::Color col;
+	sf::Color col, opp_col;
 	int team;
 	int FortID;
 	//sf::FloatRect rect;
@@ -2894,6 +2894,7 @@ public:
 		if (found) {
 			team = fort->team;
 			col = colorArr[team];
+			opp_col = oppCol(col);
 			col.a = 64;
 			fort_is_assimilating = (fort->Tank_spawn_timer < 0);
 			if (smallest_dis > fort->range) {
@@ -2938,7 +2939,10 @@ public:
 
 		circle.setPosition({ gx, gy });
 		circle.setOutlineColor(col);
-		if (fort_is_assimilating) { circle.setOutlineColor({ col.r,col.g,col.b,(sf::Uint8)(col.a * 0.5) }); }
+		if (fort_is_assimilating) {
+			sf::Color temp_col = opp_col; temp_col.a = col.a * .67;
+			circle.setOutlineColor(temp_col);
+		}
 		circle.setFillColor({ 0,0,0,0 });
 
 		flicker_timer += flicker_timer_vel * 2.5 * GameFPSRatio;
