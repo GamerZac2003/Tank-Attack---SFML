@@ -3295,7 +3295,7 @@ int main()
 	tankdies02.setVolume(20);
 	tankreload01.setVolume(15);
 	tankcreated01.setVolume(5);
-	fortcaptured01.setVolume(100);
+	fortcaptured01.setVolume(45);
 
 
 	// Load Unit Texures
